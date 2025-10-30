@@ -104,7 +104,6 @@ int main()
             break;
         case 2:
             // Iterate through directory and display file names
-            std::cin >> target_dir;
             std::cout << target_dir << "\nContains the following files:\n";
             for (const auto& entry : fs::directory_iterator(target_dir)) {
                 std::cout << entry.path() << std::endl;
@@ -127,11 +126,17 @@ int main()
 void organize(const fs::path& target_dir) {
 
     std::string fileExt;
+    bool recStop;
+    std::string entryName;
 
     for (const auto& entry : fs::directory_iterator(target_dir)) { // iterate through directory
-
+        recStop = 0;
         fileExt = entry.path().extension().string();
+        entryName = entry.path().filename().string();
         
+        if (is_directory(entry) && CATEGORIES.find(entryName) != CATEGORIES.end()) {
+            recStop = 1;
+        }
         for (const auto& category : CATEGORIES) {
 
             const std::string& categoryName = category.first;
@@ -139,6 +144,11 @@ void organize(const fs::path& target_dir) {
             
             fs::path initialPath = entry.path();
             fs::path fileToMove = initialPath.filename();
+
+            if (is_directory(initialPath) && recStop == 0) { // if file is a directory call organize function on it too
+                organize(initialPath);
+                continue;
+            }
 
             
             fs::path destinationPath = (target_dir / categoryName / fileToMove);
