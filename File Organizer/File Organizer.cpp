@@ -21,7 +21,7 @@ const std::map<std::string, std::vector<std::string>> CATEGORIES = {
 
 
     {"Audio_sorted", {
-        ".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a", ".wma", ".aiff", ".mid", ".midi"
+        ".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a", ".wma", ".aiff", ".mid", ".midi", ".flp"
     }},
 
 
@@ -72,43 +72,54 @@ const std::map<std::string, std::vector<std::string>> CATEGORIES = {
     } }
 };
 
+std::string askDir(std::string& target_dir);
 
 void organize(const fs::path& target_dir);
+
+int merger(const fs::path& target_dir, int &dirCounter);
+
 
 int main()
 {
     std::string target_dir;
     int userOption;
+    int dirCounter;
 
     do {
         std::cout << "=====================\n File Organizer\n =====================\n "
             << "Options:\n"
-            << "1. Organize files (will create folders for each category)\n"
+            << "1. Organize files (will create folders for each category for sorted files)\n"
             << "2. Check file names and extensions\n"
+            << "3. Merge(organize folders)\n"
             << "Your Option: ";
         std::cin >> userOption;
 
         switch (userOption) {
         case 1:
-            std::cout << "=====================\n File Organizer\n =====================\n ";
-            std::cout << "Enter Directory Path: ";
-            std::cin >> target_dir;
+            askDir(target_dir);
             organize(target_dir);
             std::cout << "=====================\n File Organizer\n =====================\n ";
-            std::cout << "Operation complete."
+            std::cout << "Operation complete. \n"
+                << "Files have been organized.\n"
+                << "If you wish to organize folders you can merge.\n"
                 << "Options:\n"
+                << "3. Merge(organize folders)\n"
                 << "4. Go back to main menu \n"
                 << "0. Quit\n"
                 << "Your Option: ";
             std::cin >> userOption;
             break;
         case 2:
+            askDir(target_dir);
             // Iterate through directory and display file names
             std::cout << target_dir << "\nContains the following files:\n";
             for (const auto& entry : fs::directory_iterator(target_dir)) {
                 std::cout << entry.path() << std::endl;
             }
-
+            break;
+        case 3:
+            askDir(target_dir);
+            merger(target_dir, dirCounter);
             break;
 
         default:
@@ -186,4 +197,48 @@ void organize(const fs::path& target_dir) {
 
     }
 
+};
+
+std::string askDir(std::string& target_dir) {
+    std::cout << "=====================\n File Organizer\n =====================\n ";
+    std::cout << "Enter Directory Path: ";
+    std::cin >> target_dir;
+    return target_dir;
+};
+
+int merger(const fs::path& target_dir, int &dirCounter) {
+    
+    //bool recStop;
+    std::string entryName;
+    std::string innerEntryName;
+
+    for (const auto& entry : fs::directory_iterator(target_dir)) { // iterate through directory
+        //recStop = 0;
+        entryName = entry.path().filename().string();
+        
+        
+
+        // check if name is in categories && file is dir
+        if (is_directory(entry) && CATEGORIES.find(entryName) != CATEGORIES.end()) {
+            dirCounter += 1; // supposed to count categories and allow me to repeat merger() until the only folders in dir have names from CATEGORIES
+            merger(entry, dirCounter); // check name and files inside (recursively)
+
+            for (const auto& innerEntry : fs::directory_iterator(entry)) {
+
+                // not complete // if any files (innerEntry and entry) have same name, rename to file_[num] (e.g. file_[1],file_[2], etc.)                
+
+                innerEntryName = innerEntry.path().filename().string();
+
+                fs::path initialPath = innerEntry.path();
+                fs::path fileToMove = initialPath.filename();
+
+                fs::path destinationPath = (target_dir / entryName / fileToMove); // final folder in initial target_dir
+                fs::rename(initialPath, destinationPath); // move file to final folder
+            
+            }
+            
+        }
+     
+    }
+    return dirCounter;
 };
