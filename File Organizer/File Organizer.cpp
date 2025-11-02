@@ -3,6 +3,7 @@
 #include <vector>
 #include <map>
 #include <fstream>
+#include <random>
 
 namespace fs = std::filesystem;
 
@@ -76,7 +77,9 @@ std::string askDir(std::string& target_dir);
 
 void organize(const fs::path& target_dir);
 
-int merger(const fs::path& target_dir, int &dirCounter);
+std::string randNameGen();
+
+void merger(const fs::path& target_dir);
 
 
 int main()
@@ -119,7 +122,16 @@ int main()
             break;
         case 3:
             askDir(target_dir);
-            merger(target_dir, dirCounter);
+            merger(target_dir);
+            std::cout << "=====================\n File Organizer\n =====================\n ";
+            std::cout << "Operation complete. \n"
+                << "Files have been organized.\n"
+                << "If you wish to organize folders you can merge.\n"
+                << "Options:\n"
+                << "3. Merge(organize folders)\n"
+                << "4. Go back to main menu \n"
+                << "0. Quit\n"
+                << "Your Option: ";
             break;
 
         default:
@@ -206,7 +218,37 @@ std::string askDir(std::string& target_dir) {
     return target_dir;
 };
 
-int merger(const fs::path& target_dir, int &dirCounter) {
+std::string randNameGen()
+{
+
+    srand((unsigned)time(NULL));
+    int randNumber = 6 + (rand() % 11);
+
+    // Define the list of possible characters
+    const std::string CHARACTERS
+        = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuv"
+        "wxyz0123456789";
+
+    // Create a random number generator
+    std::random_device rd;
+    std::mt19937 generator(rd());
+
+    // Create a distribution to uniformly select from all
+    // characters
+    std::uniform_int_distribution<> distribution(
+        0, CHARACTERS.size() - 1);
+
+    // Generate the random string
+    std::string random_string;
+    for (int i = 0; i < randNumber; ++i) {
+        random_string
+            += CHARACTERS[distribution(generator)];
+    }
+
+    return random_string;
+}
+
+void merger(const fs::path& target_dir) {
     
     //bool recStop;
     std::string entryName;
@@ -220,25 +262,29 @@ int merger(const fs::path& target_dir, int &dirCounter) {
 
         // check if name is in categories && file is dir
         if (is_directory(entry) && CATEGORIES.find(entryName) != CATEGORIES.end()) {
-            dirCounter += 1; // supposed to count categories and allow me to repeat merger() until the only folders in dir have names from CATEGORIES
-            merger(entry, dirCounter); // check name and files inside (recursively)
+            merger(entry); // check name and files inside (recursively)
 
             for (const auto& innerEntry : fs::directory_iterator(entry)) {
 
-                // not complete // if any files (innerEntry and entry) have same name, rename to file_[num] (e.g. file_[1],file_[2], etc.)                
-
                 innerEntryName = innerEntry.path().filename().string();
-
                 fs::path initialPath = innerEntry.path();
+                fs::path fileExtension = innerEntry.path().extension();
                 fs::path fileToMove = initialPath.filename();
+                fs::path destinationPath = (target_dir / entryName / fileToMove);
+                if (innerEntry.path().string().find(target_dir.string()) == 0) {
+                    fs::path newFileName = randNameGen() + fileExtension.string();
+                    destinationPath = initialPath.parent_path() / newFileName;
+                }
 
-                fs::path destinationPath = (target_dir / entryName / fileToMove); // final folder in initial target_dir
                 fs::rename(initialPath, destinationPath); // move file to final folder
-            
+                
             }
             
         }
+        else if (is_directory(entry)) {
+            merger(entry);
+            continue;
+        }
      
     }
-    return dirCounter;
 };
