@@ -11,8 +11,13 @@
 2. Check files
  - Lists all files in directory
 
+3. Merge Folders
+(Note: This function is created to reduce the number of sorted file folders with the same names. It's better if you use Organize Files first)
+ - Renames files by using a randomized string to ensure duplicate names don't clash
+ - Merges folders with the same names
+ - Deletes empty folders
+ - Takes files from within sorted folders and moves them to sorted folders with the same names in their parent directories (if present) (currently testing different approaches)
+ 
 ## To-do:
  - Fix for file names in different languages - either recognize them or rename them using latin characters
- - Add folder merge functionality to combine folders with the same name if the name is a category name (e.g. Images_sorted)
- - Check for files with the same names (when working with multiple folders)
  - Generate operation log
