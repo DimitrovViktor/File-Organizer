@@ -79,12 +79,13 @@ void organize(const fs::path& target_dir);
 
 std::string randNameGen();
 
-void merger(const fs::path& target_dir);
+void merger(const fs::path& target_dir, const fs::path& target_dir_initial);
 
 
 int main()
 {
     std::string target_dir;
+    std::string target_dir_initial;
     int userOption;
     int dirCounter;
 
@@ -122,7 +123,8 @@ int main()
             break;
         case 3:
             askDir(target_dir);
-            merger(target_dir);
+            target_dir_initial = target_dir;
+            merger(target_dir, target_dir_initial);
             std::cout << "=====================\n File Organizer\n =====================\n ";
             std::cout << "Operation complete. \n"
                 << "Folders have been merged.\n"
@@ -248,7 +250,7 @@ std::string randNameGen()
     return random_string;
 }
 
-void merger(const fs::path& target_dir) {
+void merger(const fs::path& target_dir, const fs::path& target_dir_initial) {
     
     //bool recStop;
     std::string entryName;
@@ -263,7 +265,7 @@ void merger(const fs::path& target_dir) {
 
         // check if name is in categories && file is dir
         if (is_directory(entry) && CATEGORIES.find(entryName) != CATEGORIES.end()) {
-            merger(entry); // check name and files inside (recursively)
+            merger(entry, target_dir_initial); // check name and files inside (recursively)
             for (const auto& innerEntry : fs::directory_iterator(entry)) {
                 innerEntryExt = innerEntry.path().extension().string();
                 entryName = entry.path().filename().string();
@@ -280,10 +282,10 @@ void merger(const fs::path& target_dir) {
                             fs::path initialPath = innerEntry.path();
                             fs::path fileExtension = innerEntry.path().extension();
                             fs::path fileToMove = initialPath.filename();
-                            fs::path destinationPath = (target_dir / categoryName / fileToMove);
+                            fs::path destinationPath = (target_dir_initial / categoryName / fileToMove);
                             if (innerEntry.path().string().find(target_dir.string()) == 0) {
                                 fs::path newFileName = randNameGen() + fileExtension.string();
-                                destinationPath = initialPath.parent_path() / newFileName;
+                                destinationPath = (target_dir_initial / categoryName / newFileName);
                             }
 
                             fs::rename(initialPath, destinationPath); // move file to final folder
@@ -297,7 +299,7 @@ void merger(const fs::path& target_dir) {
             }
         }
         else if (is_directory(entry)) {
-            merger(entry);
+            merger(entry, target_dir_initial);
             continue;
         }
      
