@@ -19,6 +19,5 @@
  - Takes files from within sorted folders and moves them to sorted folders with the same names in their parent directories (if present)
  
 ## To-do:
- - Fix for file names in different languages - either recognize them or rename them using latin characters
- - Generate operation log
- - Merger function to create a category folder for moved files before moving (if not present already) or just call organize function inside
+ - Fix for file names in different alphabets - either recognize them or rename them using latin characters so they are recognized
+ - Fix for spaces in directory paths and file names
