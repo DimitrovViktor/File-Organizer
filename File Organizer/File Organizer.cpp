@@ -89,7 +89,7 @@ void merger(const fs::path& target_dir, const fs::path& target_dir_initial, std:
 
 int main()
 {
-    int operationCounter;
+    int operationCounter = 0;
     std::string logName = genLog();
     std::ofstream logfile(logName);
 
@@ -106,13 +106,13 @@ int main()
             << "Your Option: ";
         std::cin >> userOption;
 
-        
+
 
         switch (userOption) {
         case 1:
             logfile << "CHOSEN OPTION: 1. Organize files\n";
             askDir(target_dir, logfile);
-            
+
 
             organize(target_dir, logfile);
             operationCounter++;
@@ -185,8 +185,10 @@ std::string genLog() {
 std::string askDir(std::string& target_dir, std::ofstream& logfile) {
     std::cout << "=====================\n File Organizer\n =====================\n ";
     std::cout << "Enter Directory Path: ";
-    std::cin >> target_dir;
+    std::cin.ignore();
+    std::getline(std::cin, target_dir);
     logfile << "CHOSEN Directory: " << target_dir << "\n";
+    target_dir;
     return target_dir;
 };
 
@@ -221,7 +223,7 @@ void organize(const fs::path& target_dir, std::ofstream& logfile) {
         recStop = 0;
         fileExt = entry.path().extension().string();
         entryName = entry.path().filename().string();
-        
+
         if (is_directory(entry) && CATEGORIES.find(entryName) != CATEGORIES.end()) {
             recStop = 1;
         }
@@ -229,7 +231,7 @@ void organize(const fs::path& target_dir, std::ofstream& logfile) {
 
             const std::string& categoryName = category.first;
             const std::vector<std::string>& extensions = category.second;
-            
+
             fs::path initialPath = entry.path();
             fs::path fileToMove = initialPath.filename();
 
@@ -239,9 +241,9 @@ void organize(const fs::path& target_dir, std::ofstream& logfile) {
                 continue;
             }
 
-            
+
             fs::path destinationPath = (target_dir / categoryName / fileToMove);
-            
+
 
             for (const std::string& existingExt : extensions) {
 
@@ -277,10 +279,10 @@ void organize(const fs::path& target_dir, std::ofstream& logfile) {
                         << "| Category: "
                         << categoryName << "\n";
                 }
-                
+
             }
         }
-        
+
 
     }
 
@@ -319,7 +321,7 @@ std::string randNameGen()
 }
 
 void merger(const fs::path& target_dir, const fs::path& target_dir_initial, std::ofstream& logfile) {
-    
+
     //bool recStop;
     std::string entryName;
     std::string innerEntryName;
@@ -328,7 +330,7 @@ void merger(const fs::path& target_dir, const fs::path& target_dir_initial, std:
     for (const auto& entry : fs::directory_iterator(target_dir)) { // iterate through directory
         //recStop = 0;
         entryName = entry.path().filename().string();
-        
+
         // check if name is in categories && file is dir
         if (is_directory(entry) && CATEGORIES.find(entryName) != CATEGORIES.end()) {
 
@@ -339,15 +341,15 @@ void merger(const fs::path& target_dir, const fs::path& target_dir_initial, std:
                 innerEntryExt = innerEntry.path().extension().string();
                 entryName = entry.path().filename().string();
 
-            for (const auto& category : CATEGORIES) {
+                for (const auto& category : CATEGORIES) {
 
-                const std::string& categoryName = category.first;
-                const std::vector<std::string>& extensions = category.second;
+                    const std::string& categoryName = category.first;
+                    const std::vector<std::string>& extensions = category.second;
 
-                for (const std::string& existingExt : extensions) {
+                    for (const std::string& existingExt : extensions) {
 
-                    if (innerEntryExt == existingExt) {
-                           
+                        if (innerEntryExt == existingExt) {
+
                             innerEntryName = innerEntry.path().filename().string();
                             fs::path initialPath = innerEntry.path();
                             fs::path fileExtension = innerEntry.path().extension();
@@ -384,6 +386,6 @@ void merger(const fs::path& target_dir, const fs::path& target_dir_initial, std:
             }
             continue;
         }
-     
+
     }
 };
