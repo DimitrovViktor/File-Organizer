@@ -20,4 +20,3 @@
  
 ## To-do:
  - Fix for file names in different alphabets - either recognize them or rename them using latin characters so they are recognized
- - Fix for spaces in directory paths and file names
