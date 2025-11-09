@@ -1,4 +1,5 @@
 # File Organizer
+This CLI app sorts files in directories into folders based on their extensions. It can also combine sorted folders from deeper within directories into a main directory and delete empty folders. 
 
 ## Features:
 1. Organize Files
