@@ -2,17 +2,20 @@
 This CLI app sorts files in directories into folders based on their extensions. It can also combine sorted folders from deeper within directories into a main directory and delete empty folders. 
 
 ## Features:
-1. Organize Files
+
+Log - every time an important action is performed it is recorded in a log file which is automatically created in the directory where the app is located.
+
+### Organize Files
  - Takes file extensions
- - Splits files into categories
+ - Divides files into categories
  - Creates category folders
  - Sorts files
  - Relocates files to category folders
 
-2. Check files
+### Check files
  - Lists all files in directory
 
-3. Merge Folders
+### Merge Folders
 (Note: This function is created to reduce the number of sorted file folders with the same names. It's better if you use Organize Files first)
  - Renames files by using a randomized string to ensure duplicate names don't clash
  - Merges folders with the same names
