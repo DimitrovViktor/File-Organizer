@@ -24,3 +24,4 @@ Log - every time an important action is performed it is recorded in a log file w
  
 ## To-do:
  - Fix for file names in different alphabets - either recognize them or rename them using latin characters so they are recognized
+ - Add multithreading and optmize for speed and efficiency
