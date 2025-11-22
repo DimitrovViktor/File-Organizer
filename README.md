@@ -1,4 +1,4 @@
-# File Organizer
+# File & Directory Organizer
 
 ---
 
