@@ -1,6 +1,6 @@
 # File & Directory Organizer
 
-This CLI app sorts files in directories into folders based on their extensions. It can also combine sorted folders from deeper within directories into a main directory and delete empty folders. 
+A C++ CLI application that automatically organizes files and directories based on file extensions and categories. This tool helps maintain clean directory structures by sorting files into appropriate folders.
 
 ---
 
@@ -13,6 +13,7 @@ This CLI app sorts files in directories into folders based on their extensions. 
 Log - every time an important action is performed it is recorded in a log file which is automatically created in the directory where the app is located.
 
 ### Organize Files
+Organization function that creates category folders and sorts files by extension (this process is repeated inside each subdirectory)
  - Takes file extensions
  - Divides files into categories
  - Creates category folders
@@ -20,14 +21,25 @@ Log - every time an important action is performed it is recorded in a log file w
  - Relocates files to category folders
 
 ### Check files
- - Lists all files in directory
+ - Lists all files in directory and prints them out
 
 ### Merge Folders
-(Note: This function is created to reduce the number of sorted file folders with the same names. It's better if you use Organize Files first)
+```
+Note: I suggest using this after organizing files.
+```
+Moves files from categorized folders from subdirectories to category folders inside the parent(chosen) directory and assigns random names to files
+
  - Renames files by using a randomized string to ensure duplicate names don't clash
  - Merges folders with the same names
  - Deletes empty folders
  - Takes files from within sorted folders and moves them to sorted folders with the same names in their parent directories (if present)
+
+## Supported File Types:
+- Documents: PDF, DOC, TXT, XLS, PPT, and 15+ other formats
+- Media: JPG, PNG, MP3, MP4, and 30+ image/audio/video formats
+- Code: C++, Java, Python, HTML, CSS, and 20+ programming languages
+- Archives: ZIP, RAR, 7Z, TAR, and other compressed formats
+- System Files: EXE, MSI, INI, LOG, DB, and system-related formats
  
 ## To-do:
  - Fix for file names in different alphabets - either recognize them or rename them using latin characters so they are recognized
