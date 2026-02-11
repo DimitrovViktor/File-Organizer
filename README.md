@@ -41,6 +41,6 @@ Moves files from categorized folders from subdirectories to category folders ins
 - Archives: ZIP, RAR, 7Z, TAR, and other compressed formats
 - System Files: EXE, MSI, INI, LOG, DB, and system-related formats
  
-## To-do:
+## Potential future work and improvements:
  - Fix for file names in different alphabets - either recognize them or rename them using latin characters so they are recognized
- - Add multithreading and optmize for speed and efficiency
+ - Add multithreading and optmize for speed and efficiency (in case of large folder sorting)
