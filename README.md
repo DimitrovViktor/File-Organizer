@@ -1,6 +1,6 @@
 # File & Directory Organizer
 
-A multithreaded C++ CLI tool that organizes files into categorized folders, detects project directories, and merges scattered subdirectories — all with automatic logging.
+A multithreaded C++ CLI tool that organizes files into categorized folders, detects project directories, and merges scattered subdirectories with automatic logging.
 
 ![App](https://github.com/user-attachments/assets/ccd4cd8d-545d-489e-a4c8-a3b2de4224f8)
 
