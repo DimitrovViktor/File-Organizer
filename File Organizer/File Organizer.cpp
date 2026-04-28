@@ -11,11 +11,10 @@
 
 namespace fs = std::filesystem;
 
-std::mutex fsMutex;   
-std::mutex logMutex;  
+std::mutex fsMutex;
+std::mutex logMutex;
 std::mutex coutMutex;
 
-// folders ending with this suffix are left untouched by all operations
 const std::string SKIP_SUFFIX = "_KEEP";
 
 const std::map<std::string, std::vector<std::string>> CATEGORIES = {
@@ -84,7 +83,6 @@ const std::map<std::string, std::vector<std::string>> CATEGORIES = {
     } }
 };
 
-// prebuilt set of all known extensions for fast lookup
 std::set<std::string> ALL_KNOWN_EXTENSIONS;
 
 void buildExtensionSet() {
@@ -96,11 +94,10 @@ void buildExtensionSet() {
 }
 
 
-// project signature files/folders mapped to their project subfolder
 struct ProjectSignature {
     std::string subfolder;
-    std::vector<std::string> markerFiles;  
-    std::vector<std::string> markerDirs;   
+    std::vector<std::string> markerFiles;
+    std::vector<std::string> markerDirs;
 };
 
 const std::vector<ProjectSignature> PROJECT_SIGNATURES = {
@@ -154,44 +151,35 @@ void fileCheck(const fs::path& target_dir, std::ofstream& logfile);
 
 void organize(const fs::path& target_dir, const fs::path& root_dir, std::ofstream& logfile);
 
-fs::path resolveDuplicate(const fs::path& destinationDir, const fs::path& fileName);
+fs::path resolveDuplicate(const fs::path& destinationDir, const fs::path& fileName, const fs::path& sourcePath = "");
 
 void merger(const fs::path& target_dir, const fs::path& target_dir_initial, std::ofstream& logfile);
 
-// checks if a directory matches a known project type, returns subfolder name or empty
 std::string detectProject(const fs::path& dir);
 
-// moves detected project folders into Projects_sorted/<subfolder>
 void organizeProjects(const fs::path& target_dir, std::ofstream& logfile);
 
-// runs everything in the right order: protected -> projects -> organize -> merge
+// protected -> projects -> organize -> merge
 void fullOrganize(const fs::path& target_dir, std::ofstream& logfile);
 
-// moves all _KEEP folders into a Preserved folder at the top level
 void collectProtected(const fs::path& target_dir, std::ofstream& logfile);
 
-// thread-safe helpers
 void safeMove(const fs::path& src, const fs::path& dst);
 void safeCreateDir(const fs::path& dir);
 void logWrite(std::ofstream& logfile, const std::string& msg);
 void safePrint(const std::string& msg);
 
-// returns true if the folder name ends with SKIP_SUFFIX
 bool isProtected(const std::string& name);
 
-// converts a path to a safe UTF-8 string for logging (replaces unencodable chars)
 std::string pathToUtf8(const fs::path& p);
 
-// checks if extension matches any known category
 bool isKnownExtension(const std::string& ext);
 
-// moves a file to Preserved/Unknown_extensions
 void moveToUnknown(const fs::path& filePath, const fs::path& root_dir, std::ofstream& logfile);
 
 
 int main()
 {
-    // enable UTF-8 output on windows
 #ifdef _WIN32
     system("chcp 65001 > nul");
 #endif
@@ -380,10 +368,14 @@ void safeCreateDir(const fs::path& dir) {
 void safeMove(const fs::path& src, const fs::path& dst) {
     std::lock_guard<std::mutex> lock(fsMutex);
     std::error_code ec;
+
+    if (fs::equivalent(src, dst, ec) && !ec) return;
+    if (src == dst) return;
+
     if (fs::exists(src, ec)) {
         fs::rename(src, dst, ec);
         if (ec) {
-            // rename can fail across drives or with special chars, fall back to copy+delete
+            // fall back to copy+delete if rename fails (cross-drive, special chars, etc.)
             fs::copy(src, dst, fs::copy_options::recursive | fs::copy_options::overwrite_existing, ec);
             if (!ec) {
                 fs::remove_all(src, ec);
@@ -399,7 +391,6 @@ bool isProtected(const std::string& name) {
 
 bool isKnownExtension(const std::string& ext) {
     if (ext.empty()) return false;
-    // lowercase the extension for comparison
     std::string lower = ext;
     std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
     return ALL_KNOWN_EXTENSIONS.count(lower) > 0;
@@ -412,7 +403,7 @@ void moveToUnknown(const fs::path& filePath, const fs::path& root_dir, std::ofst
     fs::path dest;
     {
         std::lock_guard<std::mutex> lock(fsMutex);
-        dest = resolveDuplicate(unknownDir, filePath.filename());
+        dest = resolveDuplicate(unknownDir, filePath.filename(), filePath);
     }
 
     logWrite(logfile, "Unknown extension: [FILE] " + pathToUtf8(filePath) + " [DEST] " + pathToUtf8(dest) + "\n");
@@ -458,7 +449,6 @@ std::string detectProject(const fs::path& dir) {
     try {
         for (const auto& sig : PROJECT_SIGNATURES) {
 
-            // check for marker files
             for (const auto& markerFile : sig.markerFiles) {
                 std::error_code ec;
                 if (fs::exists(dir / markerFile, ec)) {
@@ -466,7 +456,6 @@ std::string detectProject(const fs::path& dir) {
                 }
             }
 
-            // check for marker directories
             for (const auto& markerDir : sig.markerDirs) {
                 std::error_code ec;
                 if (fs::exists(dir / markerDir, ec) && fs::is_directory(dir / markerDir, ec)) {
@@ -475,9 +464,7 @@ std::string detectProject(const fs::path& dir) {
             }
         }
     }
-    catch (...) {
-        // if we can't read inside the dir just treat it as not a project
-    }
+    catch (...) {}
 
     return "";
 }
@@ -485,7 +472,6 @@ std::string detectProject(const fs::path& dir) {
 
 void organizeProjects(const fs::path& target_dir, std::ofstream& logfile) {
 
-    // collect directories first so we don't modify while iterating
     std::vector<fs::path> dirs;
     try {
         for (const auto& entry : fs::directory_iterator(target_dir, fs::directory_options::skip_permission_denied)) {
@@ -524,7 +510,6 @@ void organizeProjects(const fs::path& target_dir, std::ofstream& logfile) {
                 std::string projectType = detectProject(dir);
 
                 if (projectType.empty()) {
-                    // check one level deeper for nested projects
                     try {
                         for (const auto& sub : fs::directory_iterator(dir, fs::directory_options::skip_permission_denied)) {
                             try {
@@ -590,7 +575,6 @@ void collectProtected(const fs::path& target_dir, std::ofstream& logfile) {
 
     fs::path preservedRoot = target_dir / "Preserved";
 
-    // scan recursively for _KEEP folders
     std::vector<fs::path> found;
     try {
         for (auto it = fs::recursive_directory_iterator(target_dir, fs::directory_options::skip_permission_denied);
@@ -601,7 +585,6 @@ void collectProtected(const fs::path& target_dir, std::ofstream& logfile) {
 
                 std::string name = it->path().filename().string();
 
-                // don't recurse into the Preserved folder itself
                 if (it->path() == preservedRoot) {
                     it.disable_recursion_pending();
                     continue;
@@ -674,7 +657,6 @@ void organize(const fs::path& target_dir, const fs::path& root_dir, std::ofstrea
 
     logWrite(logfile, "Iterating through: " + pathToUtf8(target_dir) + "\n");
 
-    // snapshot the directory so threads don't invalidate the iterator
     std::vector<fs::directory_entry> entries;
     try {
         for (const auto& entry : fs::directory_iterator(target_dir, fs::directory_options::skip_permission_denied)) {
@@ -700,21 +682,18 @@ void organize(const fs::path& target_dir, const fs::path& root_dir, std::ofstrea
             entryName = pathToUtf8(entry.path().filename());
 
             if (is_directory(entry)) {
-                // skip sorted folders, projects folder, and preserved folder
                 if (CATEGORIES.find(entry.path().filename().string()) != CATEGORIES.end()
                     || entry.path().filename().string() == "Projects_sorted"
                     || entry.path().filename().string() == "Preserved") {
                     continue;
                 }
 
-                // skip directories that are detected as projects so we don't dismantle them
                 if (!detectProject(entry.path()).empty()) {
                     logWrite(logfile, "Skipping project directory: " + pathToUtf8(entry.path()) + "\n");
                     safePrint("Skipping project: " + entryName + "\n");
                     continue;
                 }
 
-                // skip directories marked with _KEEP suffix
                 if (isProtected(entry.path().filename().string())) {
                     logWrite(logfile, "Skipping protected directory: " + pathToUtf8(entry.path()) + "\n");
                     safePrint("Skipping (protected): " + entryName + "\n");
@@ -732,7 +711,6 @@ void organize(const fs::path& target_dir, const fs::path& root_dir, std::ofstrea
         }
     }
 
-    // process subdirectories in parallel
     std::vector<std::thread> threads;
     for (const auto& subdir : subdirs) {
         threads.emplace_back([&root_dir, &logfile, subdir]() {
@@ -746,13 +724,11 @@ void organize(const fs::path& target_dir, const fs::path& root_dir, std::ofstrea
         });
     }
 
-    // process files sequentially (they all target the same parent's category folders)
     for (const auto& entry : files) {
 
         try {
             fileExt = entry.path().extension().string();
 
-            // lowercase extension for matching
             std::string fileExtLower = fileExt;
             std::transform(fileExtLower.begin(), fileExtLower.end(), fileExtLower.begin(), ::tolower);
 
@@ -768,7 +744,7 @@ void organize(const fs::path& target_dir, const fs::path& root_dir, std::ofstrea
 
                 for (const std::string& existingExt : extensions) {
 
-                    if (fileExtLower == existingExt) { // check if file extension is in categories
+                    if (fileExtLower == existingExt) {
 
                         matched = true;
 
@@ -779,7 +755,7 @@ void organize(const fs::path& target_dir, const fs::path& root_dir, std::ofstrea
                         fs::path destinationPath;
                         {
                             std::lock_guard<std::mutex> lock(fsMutex);
-                            destinationPath = resolveDuplicate(categoryDir, fileToMove);
+                            destinationPath = resolveDuplicate(categoryDir, fileToMove, initialPath);
                         }
 
                         safeMove(initialPath, destinationPath);
@@ -797,12 +773,7 @@ void organize(const fs::path& target_dir, const fs::path& root_dir, std::ofstrea
                 if (matched) break; // stop checking other categories
             }
 
-            // file didn't match any known extension
-            if (!matched && !fileExt.empty()) {
-                moveToUnknown(entry.path(), root_dir, logfile);
-            }
-            else if (!matched && fileExt.empty()) {
-                // files with no extension at all also go to unknown
+            if (!matched) {
                 moveToUnknown(entry.path(), root_dir, logfile);
             }
         }
@@ -818,7 +789,7 @@ void organize(const fs::path& target_dir, const fs::path& root_dir, std::ofstrea
 };
 
 
-fs::path resolveDuplicate(const fs::path& destinationDir, const fs::path& fileName) {
+fs::path resolveDuplicate(const fs::path& destinationDir, const fs::path& fileName, const fs::path& sourcePath) {
 
     fs::path candidate = destinationDir / fileName;
 
@@ -827,16 +798,23 @@ fs::path resolveDuplicate(const fs::path& destinationDir, const fs::path& fileNa
         return candidate;
     }
 
+    // source file is not a conflict with itself
+    if (!sourcePath.empty() && fs::exists(sourcePath, ec) && fs::equivalent(candidate, sourcePath, ec) && !ec) {
+        return candidate;
+    }
+
     std::string stem = fileName.stem().string();
     std::string ext = fileName.extension().string();
     int counter = 1;
 
-    // keep incrementing until we find a name that doesn't exist
     while (fs::exists(candidate, ec)) {
+        if (!sourcePath.empty() && fs::equivalent(candidate, sourcePath, ec) && !ec) {
+            return candidate;
+        }
+
         std::string suffix = "_" + std::to_string(counter);
 
         std::string newStem = stem;
-        // trim the stem if adding the suffix would exceed the original length + suffix room
         int maxStemLen = 200 - (int)ext.size() - (int)suffix.size();
         if ((int)newStem.size() > maxStemLen && maxStemLen > 0) {
             newStem = newStem.substr(0, maxStemLen);
@@ -854,7 +832,6 @@ void merger(const fs::path& target_dir, const fs::path& target_dir_initial, std:
     std::string entryName;
     std::string innerEntryExt;
 
-    // snapshot directory contents before modifying anything
     std::vector<fs::directory_entry> entries;
     try {
         for (const auto& entry : fs::directory_iterator(target_dir, fs::directory_options::skip_permission_denied)) {
@@ -878,12 +855,10 @@ void merger(const fs::path& target_dir, const fs::path& target_dir_initial, std:
         try {
             entryName = entry.path().filename().string();
 
-            // check if name is in categories && file is dir
             if (is_directory(entry) && CATEGORIES.find(entryName) != CATEGORIES.end()) {
 
-                merger(entry, target_dir_initial, logfile); // check name and files inside (recursively)
+                merger(entry, target_dir_initial, logfile);
 
-                // snapshot inner entries before moving
                 std::vector<fs::directory_entry> innerEntries;
                 try {
                     for (const auto& innerEntry : fs::directory_iterator(entry, fs::directory_options::skip_permission_denied)) {
@@ -901,8 +876,6 @@ void merger(const fs::path& target_dir, const fs::path& target_dir_initial, std:
                 for (const auto& innerEntry : innerEntries) {
                     try {
                         innerEntryExt = innerEntry.path().extension().string();
-
-                        // lowercase for matching
                         std::string innerExtLower = innerEntryExt;
                         std::transform(innerExtLower.begin(), innerExtLower.end(), innerExtLower.begin(), ::tolower);
 
@@ -927,7 +900,7 @@ void merger(const fs::path& target_dir, const fs::path& target_dir_initial, std:
                                     fs::path destinationPath;
                                     {
                                         std::lock_guard<std::mutex> lock(fsMutex);
-                                        destinationPath = resolveDuplicate(target_dir_initial / categoryName, fileToMove);
+                                        destinationPath = resolveDuplicate(target_dir_initial / categoryName, fileToMove, initialPath);
                                     }
 
                                     if (destinationPath.filename() != fileToMove) {
@@ -936,13 +909,13 @@ void merger(const fs::path& target_dir, const fs::path& target_dir_initial, std:
 
                                     logWrite(logfile, "Moving file [OLD PATH] " + pathToUtf8(initialPath) + " [NEW PATH] " + pathToUtf8(destinationPath) + "\n");
 
-                                    safeMove(initialPath, destinationPath); // move file to final folder
+                                    safeMove(initialPath, destinationPath);
                                     break;
                                 }
                             }
                             if (matched) break;
                         }
-                        // unknown extension files in merger go to unknown too
+
                         if (!matched && !is_directory(innerEntry)) {
                             moveToUnknown(innerEntry.path(), target_dir_initial, logfile);
                         }
@@ -954,19 +927,16 @@ void merger(const fs::path& target_dir, const fs::path& target_dir_initial, std:
             }
             else if (is_directory(entry)) {
 
-                // skip projects folder and preserved folder during merge
                 if (entryName == "Projects_sorted" || entryName == "Preserved") {
                     continue;
                 }
 
-                // skip directories marked with _KEEP suffix
                 if (isProtected(entryName)) {
                     logWrite(logfile, "Skipping protected directory: " + pathToUtf8(entry.path()) + "\n");
                     safePrint("Skipping (protected): " + entryName + "\n");
                     continue;
                 }
 
-                // thread non-category subdirectories
                 threads.emplace_back([entry, &target_dir_initial, &logfile]() {
                     try {
                         merger(entry, target_dir_initial, logfile);
@@ -980,13 +950,13 @@ void merger(const fs::path& target_dir, const fs::path& target_dir_initial, std:
         catch (const std::exception& e) {
             logWrite(logfile, "Error processing entry in merger: " + std::string(e.what()) + "\n");
         }
+
     }
 
     for (auto& t : threads) {
         t.join();
     }
 
-    // clean up empty directories after all threads finish
     for (const auto& entry : entries) {
         try {
             std::error_code ec;
