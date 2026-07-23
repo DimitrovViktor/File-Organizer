@@ -3,7 +3,7 @@
 <div align="center">
 
 ![C++](https://img.shields.io/badge/C%2B%2B-17-blue?logo=cplusplus)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
 
 A multithreaded C++ CLI tool that organizes files into categorized folders, detects project directories, and merges scattered subdirectories with automatic logging.
 </div>
